@@ -1,28 +1,29 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace MyApp.Controllers
+namespace MyApp
 {
     [ApiController]
-    [Route("employees")]
+    [Route("api/[controller]")]
     public class EmployeesController : ControllerBase
     {
-        private readonly List<Employee> _employees;
+        private readonly IEmployeeRepository _employeeRepository;
 
-        public EmployeesController()
+        public EmployeesController(IEmployeeRepository employeeRepository)
         {
-            _employees = GetEmployees().ToList();
+            _employeeRepository = employeeRepository;
         }
 
-        [HttpGet(Name = "Get Employees")]
+
+        [HttpGet(Name = "GetEmployees")]
         public ActionResult<IEnumerable<Employee>> Get()
         {
-            return Ok(_employees);
+            return Ok(_employeeRepository.GetAll());
         }
 
-        [HttpGet("{id}", Name = "Get Employees")]
-        public ActionResult<IEnumerable<Employee>> Get(int id)
+        [HttpGet("{id}", Name = "GetEmployee")]
+        public ActionResult<Employee> Get(Guid id)
         {
-            var employee = _employees.SingleOrDefault(x => x.Id == id);
+            var employee = _employeeRepository.GetById(id);
 
             if (employee == null)
             {
@@ -32,55 +33,46 @@ namespace MyApp.Controllers
             return Ok(employee);
         }
 
-        [HttpPost(Name = "Create Employee")]
-        public ActionResult Create(Employee employee)
+        [HttpPost(Name = "CreateEmployee")]
+        public ActionResult<Employee> Create([FromBody] EmployeeCreateDto employeeDto)
         {
-            _employees.Add(employee);
 
-            return Created();
+            var newEmployee = new Employee
+            {
+                Id = Guid.NewGuid(),
+                Name = employeeDto.Name,
+                Dob = employeeDto.Dob
+            };
+
+            _employeeRepository.Add(newEmployee);
+
+            return CreatedAtRoute("GetEmployee", new { id = newEmployee.Id }, newEmployee);
         }
 
-        [HttpPut("{id}", Name = "Update Employee")]
-        public ActionResult Update(int id, EmployeeUpdateDto employee)
+        [HttpPut("{id}", Name = "UpdateEmployee")]
+        public ActionResult Update(Guid id, [FromBody] EmployeeUpdateDto employeeDto)
         {
-            var employeeToUpdate = _employees.SingleOrDefault(x => x.Id == id);
+            var employeeToUpdate = _employeeRepository.GetById(id);
 
-            if (employeeToUpdate == null) 
-            { 
-                return NotFound();
-            }
-            
-            employeeToUpdate.Name = employee.Name;
-            employeeToUpdate.Dob = employee.Dob;
-
-            return Ok();
-        }
-
-        [HttpDelete("{id}", Name = "Delete Employee")]
-        public ActionResult Delete(int id)
-        {
-            var employeeToDelete = _employees.SingleOrDefault(x=> x.Id == id);
-
-            if(employeeToDelete == null)
+            if (employeeToUpdate == null)
             {
                 return NotFound();
             }
 
-            _employees.Remove(employeeToDelete);
-            
-            return Ok();
+            employeeToUpdate.Name = employeeDto.Name;
+            employeeToUpdate.Dob = employeeDto.Dob;
+
+            return NoContent();
         }
 
-
-        private static IEnumerable<Employee> GetEmployees()
+        [HttpDelete("{id}", Name = "DeleteEmployee")]
+        public ActionResult Delete(Guid id)
         {
-            return
-            [
-                new(1, "John", new DateTime(1990, 10, 15)),
-                new(2, "Sam", new DateTime(2005, 6, 08)),
-                new(3, "Rohan", new DateTime(2015, 1, 1)),
-                new(3, "Don", new DateTime(1998, 2, 20)),
-            ];
+            _employeeRepository.Remove(id);
+
+            return NoContent();
         }
+
+       
     }
 }
