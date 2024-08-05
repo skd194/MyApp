@@ -1,4 +1,6 @@
-﻿namespace MyApp
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace MyApp
 {
     public class EmployeeCreateDto
     {
